@@ -9,6 +9,7 @@ The project is based on a backlog for a **Legal Document Clause Analyzer**. The 
 ## Planned Features
 
 ### Sprint 1
+
 - User registration and login
 - Profile management
 - Upload legal documents in PDF, PNG, and JPG formats
@@ -18,6 +19,7 @@ The project is based on a backlog for a **Legal Document Clause Analyzer**. The 
 - View, re-open, re-analyze, and delete uploaded documents
 
 ### Sprint 2
+
 - Plain-English legal document summarization
 - Structured summaries by section
 - Clause extraction
@@ -27,6 +29,7 @@ The project is based on a backlog for a **Legal Document Clause Analyzer**. The 
 - Export document analysis
 
 ### Sprint 3
+
 - Chat with a document using a RAG pipeline
 - Source-grounded answers with document snippets
 - Multi-document comparison
@@ -70,7 +73,7 @@ LegalEase/
 ### 1. Clone the repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Rishab830/LegalEase
 cd LegalEase
 ```
 
@@ -83,7 +86,7 @@ python -m venv venv
 On Windows:
 
 ```bash
-venv\Scriptsctivate
+venv\Scripts\activate
 ```
 
 On Linux/macOS:
