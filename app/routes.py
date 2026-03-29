@@ -2,7 +2,7 @@ import os
 from uuid import uuid4
 from datetime import datetime
 
-from flask import Blueprint, render_template, current_app, jsonify, request, send_from_directory, redirect, url_for
+from flask import Blueprint, render_template, current_app, jsonify, request, send_from_directory, redirect, url_for, send_file
 from flask_login import login_required, current_user
 from app.models import Notification
 from app.utils.ocr import perform_ocr
@@ -138,7 +138,6 @@ def upload():
         return jsonify({'success': False, 'message': 'Upload failed.'}), 500
 
 @main.route('/uploads/<filename>')
-@login_required
 def get_uploaded_file(filename):
     """Serve the uploaded files."""
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
