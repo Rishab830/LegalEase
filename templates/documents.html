@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Document History - LegalEase{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Document History</h1>
+    <a href="{{ url_for('main.upload') }}" class="btn btn-primary">Upload New Document</a>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="typeFilter" class="form-label">Filter by Type</label>
+                <select id="typeFilter" class="form-select">
+                    <option value="all">All Types</option>
+                    <option value="Contract">Contract</option>
+                    <option value="NDA">NDA</option>
+                    <option value="Terms & Conditions">Terms & Conditions</option>
+                    <option value="Privacy Policy">Privacy Policy</option>
+                    <option value="Unknown">Unknown</option>
+                </select>
+            </div>
+            <div class="col-md-8 d-flex align-items-end justify-content-end">
+                <p class="text-muted mb-2">Total Documents: <span id="docCount">{{ documents|length }}</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle" id="docsTable">
+        <thead class="table-light">
+            <tr>
+                <th scope="col" class="sortable" data-sort="name" style="cursor: pointer;">Filename <span class="sort-icon">↕</span></th>
+                <th scope="col" class="sortable" data-sort="date" style="cursor: pointer;">Upload Date <span class="sort-icon">↕</span></th>
+                <th scope="col">Type</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in documents %}
+            <tr class="doc-row" data-type="{{ doc.doc_type or 'Unknown' }}" data-date="{{ doc.upload_date.isoformat() }}" data-name="{{ doc.original_filename.lower() }}">
+                <td>
+                    <div class="fw-bold">{{ doc.original_filename }}</div>
+                    <small class="text-muted text-break">{{ doc.doc_id }}</small>
+                </td>
+                <td>{{ doc.upload_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <span class="badge bg-secondary">{{ doc.doc_type or 'Unknown' }}</span>
+                </td>
+                <td>
+                    {% if doc.status == 'processed' %}
+                        <span class="badge bg-success">Processed</span>
+                    {% elif doc.status == 'ocr_complete' %}
+                        <span class="badge bg-info">OCR Complete</span>
+                    {% elif doc.status == 'uploaded' %}
+                        <span class="badge bg-warning text-dark">Uploaded</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark">{{ doc.status }}</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('main.get_uploaded_file', filename=doc.stored_filename) }}" target="_blank" class="btn btn-outline-primary">View</a>
+                        <button class="btn btn-outline-secondary re-analyze-btn" data-id="{{ doc.doc_id }}">Re-analyze</button>
+                        <button class="btn btn-outline-danger delete-btn" data-id="{{ doc.doc_id }}" data-name="{{ doc.original_filename }}">Delete</button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not documents %}
+            <tr id="noDocsRow">
+                <td colspan="5" class="text-center py-5">
+                    <div class="text-muted">No documents found. <a href="{{ url_for('main.upload') }}">Upload your first document</a>.</div>
+                </td>
+            </tr>
+            {% endif %}
+            <tr id="noResultsRow" style="display: none;">
+                <td colspan="5" class="text-center py-5">
+                    <div class="text-muted">No documents match the selected filter.</div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete <strong id="deleteDocName"></strong>? This action cannot be undone and will permanently remove the file and all associated analysis.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete Document</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.sortable:hover .sort-icon { color: #0d6efd; }
+.asc .sort-icon::after { content: ' ↑'; }
+.desc .sort-icon::after { content: ' ↓'; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeFilter = document.getElementById('typeFilter');
+    const docRows = document.querySelectorAll('.doc-row');
+    const docCount = document.getElementById('docCount');
+    const noResultsRow = document.getElementById('noResultsRow');
+    
+    // Filtering
+    typeFilter.addEventListener('change', function() {
+        const selectedType = this.value;
+        let count = 0;
+        
+        docRows.forEach(row => {
+            const rowType = row.dataset.type;
+            if (selectedType === 'all' || rowType === selectedType) {
+                row.style.display = '';
+                count++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        docCount.textContent = count;
+        if (noResultsRow) {
+            noResultsRow.style.display = (count === 0 && docRows.length > 0) ? '' : 'none';
+        }
+    });
+    
+    // Sorting
+    const tableHeaders = document.querySelectorAll('.sortable');
+    tableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const sortKey = this.dataset.sort;
+            const tbody = document.querySelector('#docsTable tbody');
+            const rows = Array.from(tbody.querySelectorAll('.doc-row'));
+            
+            const isAscending = this.classList.contains('asc');
+            
+            rows.sort((a, b) => {
+                const valA = a.dataset[sortKey];
+                const valB = b.dataset[sortKey];
+                
+                if (sortKey === 'date') {
+                    return isAscending ? new Date(valB) - new Date(valA) : new Date(valA) - new Date(valB);
+                }
+                return isAscending ? valB.localeCompare(valA) : valA.localeCompare(valB);
+            });
+            
+            // Clear current rows and re-append sorted
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Toggle directions
+            tableHeaders.forEach(h => {
+                if (h !== this) h.classList.remove('asc', 'desc');
+            });
+            this.classList.toggle('asc', !isAscending);
+            this.classList.toggle('desc', isAscending);
+        });
+    });
+    
+    // Delete handling
+    const deleteModalElem = document.getElementById('deleteModal');
+    const deleteModal = new bootstrap.Modal(deleteModalElem);
+    let docIdToDelete = null;
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            docIdToDelete = this.dataset.id;
+            document.getElementById('deleteDocName').textContent = this.dataset.name;
+            deleteModal.show();
+        });
+    });
+    
+    document.getElementById('confirmDelete').addEventListener('click', function() {
+        if (!docIdToDelete) return;
+        
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Deleting...';
+        
+        fetch(`/documents/${docIdToDelete}/delete`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'Error deleting document');
+                btn.disabled = false;
+                btn.textContent = 'Delete Document';
+            }
+        })
+        .catch(err => {
+            alert('Error connecting to server');
+            btn.disabled = false;
+            btn.textContent = 'Delete Document';
+        });
+    });
+    
+    // Re-analyze handling
+    document.querySelectorAll('.re-analyze-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const docId = this.dataset.id;
+            const originalText = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>...';
+            
+            fetch(`/documents/${docId}/re-analyze`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Error triggering re-analysis');
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                }
+            })
+            .catch(err => {
+                alert('Error connecting to server');
+                this.disabled = false;
+                this.innerHTML = originalText;
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

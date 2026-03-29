@@ -123,3 +123,64 @@ def upload():
 def get_uploaded_file(filename):
     """Serve the uploaded files."""
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+
+
+@main.route("/documents")
+@login_required
+def documents():
+    """Display user's document history."""
+    mongo_db = current_app.config.get('mongo_db')
+    user_docs = list(mongo_db.documents.find({'user_id': current_user.id}).sort('upload_date', -1))
+    return render_template("documents.html", documents=user_docs)
+
+
+@main.route("/documents/<doc_id>/delete", methods=["POST"])
+@login_required
+def delete_document(doc_id):
+    """Delete a document record and its file."""
+    mongo_db = current_app.config.get('mongo_db')
+    doc = mongo_db.documents.find_one({'doc_id': doc_id})
+
+    if not doc:
+        return jsonify({'success': False, 'message': 'Document not found.'}), 404
+
+    if doc['user_id'] != current_user.id:
+        return jsonify({'success': False, 'message': 'Permission denied.'}), 403
+
+    try:
+        # Delete file from disk
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], doc['stored_filename'])
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        # Delete record from MongoDB
+        mongo_db.documents.delete_one({'doc_id': doc_id})
+
+        return jsonify({'success': True, 'message': 'Document deleted successfully.'})
+    except Exception as e:
+        current_app.logger.error('Delete error: %s', e)
+        return jsonify({'success': False, 'message': 'Failed to delete document.'}), 500
+
+
+@main.route("/documents/<doc_id>/re-analyze", methods=["POST"])
+@login_required
+def re_analyze_document(doc_id):
+    """Reset document status to trigger re-analysis."""
+    mongo_db = current_app.config.get('mongo_db')
+    doc = mongo_db.documents.find_one({'doc_id': doc_id})
+
+    if not doc:
+        return jsonify({'success': False, 'message': 'Document not found.'}), 404
+
+    if doc['user_id'] != current_user.id:
+        return jsonify({'success': False, 'message': 'Permission denied.'}), 403
+
+    try:
+        mongo_db.documents.update_one(
+            {'doc_id': doc_id},
+            {'$set': {'status': 'uploaded', 're_analyzed_at': datetime.utcnow()}}
+        )
+        return jsonify({'success': True, 'message': 'Re-analysis triggered successfully.'})
+    except Exception as e:
+        current_app.logger.error('Re-analyze error: %s', e)
+        return jsonify({'success': False, 'message': 'Failed to trigger re-analysis.'}), 500
