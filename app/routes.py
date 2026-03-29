@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from app.models import Notification
 from app.utils.ocr import perform_ocr
 from app.utils.processor import extract_pdf_text, clean_text, classify_document, run_pipeline
+from app.utils.background_processor import start_background_processing
 
 main = Blueprint("main", __name__)
 
