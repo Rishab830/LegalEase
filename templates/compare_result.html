@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Comparison Analysis - LegalEase{% endblock %}
+
+{% block content %}
+<div class="row mb-5 align-items-center">
+    <div class="col">
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('main.documents') }}">History</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('main.compare_documents_route') }}">Compare</a></li>
+                <li class="breadcrumb-item active">Analysis</li>
+            </ol>
+        </nav>
+        <h1 class="fw-bold h2 mb-0">Document Comparison Analysis</h1>
+    </div>
+    <div class="col-auto">
+        <span class="badge bg-dark px-3 py-2 fs-6">{{ doc_a.doc_type }} Comparison</span>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- Match Score Gauge -->
+    <div class="col-md-4 text-center">
+        <div class="card h-100 border-0 shadow-sm p-4 bg-primary text-white" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+            <h5 class="fw-bold small uppercase mb-4 opacity-75">Semantic Match Score</h5>
+            <div class="display-1 fw-bold mb-0">
+                {{ comparison.match_score }}<span class="fs-4">%</span>
+            </div>
+            <p class="mt-3 opacity-75 small">AI analysis of term overlap and intent consistency</p>
+        </div>
+    </div>
+    
+    <!-- Risk Delta Summary -->
+    <div class="col-md-8">
+        <div class="card h-100 border-0 shadow-sm p-4">
+            <h5 class="fw-bold small uppercase mb-3 text-secondary">Risk Profile Evolution</h5>
+            <p class="mb-0 text-dark lead" style="line-height: 1.6; font-size: 1.1rem;">
+                {{ comparison.risk_delta }}
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Key Differences (Diff) -->
+    <div class="col-lg-7">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-white p-4 border-0 pb-0">
+                <h5 class="fw-bold mb-0 text-primary">Key Semantic Differences</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="list-group list-group-flush">
+                    {% for item in comparison.key_differences %}
+                        <div class="list-group-item px-0 py-3 border-light d-flex align-items-start bg-transparent">
+                            {% if item.startswith('+') %}
+                                <div class="diff-icon bg-success text-white me-3 mt-1">+</div>
+                                <div class="text-success fw-bold flex-grow-1">{{ item[1:].strip() }}</div>
+                            {% elif item.startswith('-') %}
+                                <div class="diff-icon bg-danger text-white me-3 mt-1">-</div>
+                                <div class="text-danger fw-bold flex-grow-1">{{ item[1:].strip() }}</div>
+                            {% else %}
+                                <div class="diff-icon bg-secondary text-white me-3 mt-1">~</div>
+                                <div class="text-muted flex-grow-1">{{ item }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    {% if not comparison.key_differences %}
+                        <p class="text-muted text-center py-5">No significant differences detected between the two documents.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side-by-Side Context -->
+    <div class="col-lg-5">
+        <div class="card h-100 border-0 shadow-sm overflow-hidden">
+            <div class="card-header bg-white p-4 border-0">
+                <h5 class="fw-bold mb-0">Documents Compared</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="d-flex flex-column h-100">
+                    <div class="p-4 border-bottom bg-light">
+                        <h6 class="text-primary small fw-bold uppercase mb-2">Document A (Baseline)</h6>
+                        <div class="h5 fw-bold mb-1">{{ doc_a.original_filename }}</div>
+                        <p class="small text-muted mb-3">Uploaded {{ doc_a.upload_date.strftime('%B %d, %Y') }}</p>
+                        <a href="{{ url_for('main.get_analysis', doc_id=doc_a.doc_id) }}" class="btn btn-sm btn-outline-primary px-3 rounded-pill">View Dashboard A</a>
+                    </div>
+                    <div class="p-4 bg-light flex-grow-1">
+                        <h6 class="text-success small fw-bold uppercase mb-2">Document B (Modified)</h6>
+                        <div class="h5 fw-bold mb-1">{{ doc_b.original_filename }}</div>
+                        <p class="small text-muted mb-3">Uploaded {{ doc_b.upload_date.strftime('%B %d, %Y') }}</p>
+                        <a href="{{ url_for('main.get_analysis', doc_id=doc_b.doc_id) }}" class="btn btn-sm btn-outline-success px-3 rounded-pill">View Dashboard B</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .uppercase { text-transform: uppercase; letter-spacing: 1px; }
+    .diff-icon { 
+        width: 24px; 
+        min-width: 24px;
+        height: 24px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        border-radius: 6px; 
+        font-weight: bold;
+        font-size: 14px;
+    }
+    .breadcrumb-item + .breadcrumb-item::before { content: ">"; }
+</style>
+{% endblock %}

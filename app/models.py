@@ -82,3 +82,49 @@ class User(UserMixin):
             {'$set': {'password_hash': password_hash}}
         )
         return True
+
+
+class Notification:
+    def __init__(self, n_data):
+        self.id = str(n_data['_id'])
+        self.user_id = n_data.get('user_id')
+        self.type = n_data.get('type', 'info') # info, success, warning, danger
+        self.message = n_data.get('message')
+        self.link = n_data.get('link')
+        self.is_read = n_data.get('is_read', False)
+        self.created_at = n_data.get('created_at', datetime.utcnow())
+
+    @staticmethod
+    def create(user_id, n_type, message, link=None):
+        mongo_db = get_mongo_db()
+        n_doc = {
+            'user_id': user_id,
+            'type': n_type,
+            'message': message,
+            'link': link,
+            'is_read': False,
+            'created_at': datetime.utcnow()
+        }
+        result = mongo_db.notifications.insert_one(n_doc)
+        return str(result.inserted_id)
+
+    @staticmethod
+    def get_unread_count(user_id):
+        mongo_db = get_mongo_db()
+        return mongo_db.notifications.count_documents({'user_id': user_id, 'is_read': False})
+
+    @staticmethod
+    def get_for_user(user_id, limit=20):
+        mongo_db = get_mongo_db()
+        notifications = list(mongo_db.notifications.find({'user_id': user_id}).sort('created_at', -1).limit(limit))
+        return [Notification(n) for n in notifications]
+
+    @staticmethod
+    def mark_as_read(notification_id):
+        mongo_db = get_mongo_db()
+        mongo_db.notifications.update_one({'_id': ObjectId(notification_id)}, {'$set': {'is_read': True}})
+
+    @staticmethod
+    def mark_all_as_read(user_id):
+        mongo_db = get_mongo_db()
+        mongo_db.notifications.update_many({'user_id': user_id}, {'$set': {'is_read': True}})

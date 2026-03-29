@@ -1,0 +1,38 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- D:\Sem6\LegalEase\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Sem6\LegalEase
+collecting ... collected 4 items
+
+test_summarization.py::TestSummarization::test_short_summary_generation_and_caching FAILED [ 25%]
+test_summarization.py::TestSummarization::test_detailed_summary_parsing PASSED [ 50%]
+test_summarization.py::TestSummarization::test_summary_forbidden_for_other_user FAILED [ 75%]
+test_summarization.py::TestSummarization::test_summary_conflict_for_unprocessed_doc PASSED [100%]
+
+================================== FAILURES ===================================
+_________ TestSummarization.test_short_summary_generation_and_caching _________
+test_summarization.py:73: in test_short_summary_generation_and_caching
+    assert data['cache_hit'] is False
+E   assert True is False
+___________ TestSummarization.test_summary_forbidden_for_other_user ___________
+test_summarization.py:134: in test_summary_forbidden_for_other_user
+    assert response.status_code == 403
+E   assert 302 == 403
+E    +  where 302 = <WrapperTestResponse streamed [302 FOUND]>.status_code
+============================== warnings summary ===============================
+test_summarization.py::TestSummarization::test_short_summary_generation_and_caching
+  C:\Python314\Lib\importlib\__init__.py:88: FutureWarning: 
+  
+  All support for the `google.generativeai` package has ended. It will no longer be receiving 
+  updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+  See README for more details:
+  
+  https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+  
+    return _bootstrap._gcd_import(name[level:], package, level)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED test_summarization.py::TestSummarization::test_short_summary_generation_and_caching
+FAILED test_summarization.py::TestSummarization::test_summary_forbidden_for_other_user
+=================== 2 failed, 2 passed, 1 warning in 7.10s ====================

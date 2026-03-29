@@ -2,11 +2,20 @@ import os
 from uuid import uuid4
 from datetime import datetime
 
-from flask import Blueprint, render_template, current_app, jsonify, request, send_from_directory
+from flask import Blueprint, render_template, current_app, jsonify, request, send_from_directory, redirect, url_for
 from flask_login import login_required, current_user
+from app.models import Notification
 from app.utils.ocr import perform_ocr
+from app.utils.processor import extract_pdf_text, clean_text, classify_document, run_pipeline
 
 main = Blueprint("main", __name__)
+
+
+
+
+
+@main.route("/")
+# ... (rest of the file)
 
 
 @main.route("/")
@@ -114,13 +123,8 @@ def upload():
 
         mongo_db.documents.insert_one(document)
 
-        # Trigger OCR for image uploads
-        if ext in {'png', 'jpg', 'jpeg'}:
-            raw_text, ocr_status = perform_ocr(file_path)
-            mongo_db.documents.update_one(
-                {'doc_id': doc_id},
-                {'$set': {'raw_text': raw_text, 'status': ocr_status}}
-            )
+        # Trigger Extraction & Cleaning Pipeline (Pass user_id for notifications)
+        run_pipeline(doc_id, file_path, ext, user_id=current_user.id)
 
         return jsonify({'success': True, 'doc_id': doc_id, 'filename': stored_filename, 'ext': ext}), 201
     except Exception as e:
@@ -185,11 +189,285 @@ def re_analyze_document(doc_id):
         return jsonify({'success': False, 'message': 'Permission denied.'}), 403
 
     try:
+        # Determine extension and file path from stored filename
+        ext = os.path.splitext(doc['stored_filename'])[1].lower().strip('.')
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], doc['stored_filename'])
+
+        # Reset status and run pipeline
         mongo_db.documents.update_one(
             {'doc_id': doc_id},
-            {'$set': {'status': 'uploaded', 're_analyzed_at': datetime.utcnow()}}
+            {'$set': {'status': 're-processing', 're_analyzed_at': datetime.utcnow()}}
         )
-        return jsonify({'success': True, 'message': 'Re-analysis triggered successfully.'})
+
+        run_pipeline(doc_id, file_path, ext, user_id=current_user.id)
+
+        return jsonify({'success': True, 'message': 'Re-analysis completed successfully.'})
     except Exception as e:
         current_app.logger.error('Re-analyze error: %s', e)
         return jsonify({'success': False, 'message': 'Failed to trigger re-analysis.'}), 500
+
+
+@main.route("/document/<doc_id>/summary")
+@login_required
+def get_summary(doc_id):
+    """Retrieve or generate a summary of a document."""
+    mode = request.args.get('mode', 'short')
+    if mode not in ['short', 'detailed']:
+        return jsonify({'success': False, 'message': 'Invalid mode (use "short" or "detailed").'}), 400
+
+    mongo_db = current_app.config.get('mongo_db')
+    doc = mongo_db.documents.find_one({'doc_id': doc_id})
+
+    if not doc:
+        return jsonify({'success': False, 'message': 'Document not found.'}), 404
+
+    if doc['user_id'] != current_user.id:
+        return jsonify({'success': False, 'message': 'Permission denied.'}), 403
+
+    if doc.get('status') != 'processed':
+        return jsonify({'success': False, 'message': 'Document not yet processed. Please wait or re-analyze.'}), 409
+
+    # Check MongoDB cache
+    summary_data = doc.get('summary', {})
+    if mode in summary_data:
+        return jsonify({
+            'success': True,
+            'summary': summary_data[mode],
+            'cache_hit': True,
+            'mode': mode
+        })
+
+    # Generate summary using LLM
+    cleaned_text = doc.get('cleaned_text', '')
+    if not cleaned_text:
+        return jsonify({'success': False, 'message': 'No text found in document to summarize.'}), 400
+
+    from app.utils.llm import generate_summary
+    summary = generate_summary(cleaned_text, mode=mode)
+
+    if summary:
+        mongo_db.documents.update_one(
+            {'doc_id': doc_id},
+            {'$set': {f'summary.{mode}': summary}}
+        )
+        return jsonify({
+            'success': True,
+            'summary': summary,
+            'cache_hit': False,
+            'mode': mode
+        })
+    else:
+        return jsonify({'success': False, 'message': 'Failed to generate summary via AI.'}), 500
+
+
+@main.route("/document/<doc_id>/analysis")
+@login_required
+def get_analysis(doc_id):
+    """Render the detailed analysis dashboard for a document."""
+    mongo_db = current_app.config.get('mongo_db')
+    doc = mongo_db.documents.find_one({'doc_id': doc_id})
+
+    if not doc:
+        return "Document not found", 404
+    if doc['user_id'] != current_user.id:
+        return "Permission denied", 403
+    if doc.get('status') != 'processed':
+        # If not processed, redirect to history list
+        return redirect(url_for('main.documents'))
+
+    from app.utils.llm import generate_summary, analyze_clauses
+    
+    # Orchesrate missing AI components (ensure caching)
+    summary = doc.get('summary', {})
+    updated = False
+    
+    if 'short' not in summary:
+        res = generate_summary(doc['cleaned_text'], mode='short')
+        if res:
+            summary['short'] = res
+            updated = True
+            
+    if 'detailed' not in summary:
+        res = generate_summary(doc['cleaned_text'], mode='detailed')
+        if res:
+            summary['detailed'] = res
+            updated = True
+            
+    if 'clauses' not in summary:
+        res = analyze_clauses(doc['cleaned_text'])
+        if res:
+            summary['clauses'] = res
+            updated = True
+            
+    if updated:
+        mongo_db.documents.update_one({'doc_id': doc_id}, {'$set': {'summary': summary}})
+
+    return render_template("analysis.html", doc=doc, summary=summary)
+
+
+@main.route("/document/<doc_id>/download")
+@login_required
+def download_document(doc_id):
+    """Download the cleaned text of a document as a .txt file."""
+    mongo_db = current_app.config.get('mongo_db')
+    doc = mongo_db.documents.find_one({'doc_id': doc_id})
+
+    if not doc or doc['user_id'] != current_user.id:
+        return "Unauthorized", 403
+
+    from flask import Response
+    content = doc.get('cleaned_text', 'No text extracted.')
+    safe_filename = "".join([c for c in doc['original_filename'] if c.isalnum() or c in (' ', '.', '_')]).strip()
+    filename = f"{os.path.splitext(safe_filename)[0]}_cleaned.txt"
+
+    return Response(
+        content,
+        mimetype="text/plain",
+        headers={"Content-disposition": f"attachment; filename={filename}"}
+    )
+
+
+@main.route("/compare", methods=['GET', 'POST'])
+@login_required
+def compare_documents_route():
+    """Select and compare two documents side-by-side."""
+    mongo_db = current_app.config.get('mongo_db')
+    
+    if request.method == 'GET':
+        # Fetch all processed documents for the user to select from
+        user_docs = list(mongo_db.documents.find({
+            'user_id': current_user.id,
+            'status': 'processed'
+        }).sort('upload_date', -1))
+        return render_template("compare_select.html", documents=user_docs)
+
+    # POST logic: Receive two document IDs and perform AI comparison
+    doc_a_id = request.form.get('doc_a')
+    doc_b_id = request.form.get('doc_b')
+
+    if not doc_a_id or not doc_b_id:
+        return redirect(url_for('main.compare_documents_route'))
+
+    if doc_a_id == doc_b_id:
+        user_docs = list(mongo_db.documents.find({
+            'user_id': current_user.id,
+            'status': 'processed'
+        }).sort('upload_date', -1))
+        return render_template("compare_select.html", documents=user_docs, error="Please select two DIFFERENT documents to compare.")
+
+    doc_a = mongo_db.documents.find_one({'doc_id': doc_a_id})
+    doc_b = mongo_db.documents.find_one({'doc_id': doc_b_id})
+
+    if not doc_a or not doc_b:
+        return "Document(s) not found.", 404
+        
+    if doc_a['user_id'] != current_user.id or doc_b['user_id'] != current_user.id:
+        return "Unauthorized access to these documents.", 403
+
+    # Restriction: Must be of the same type for a valid comparison
+    if doc_a.get('doc_type') != doc_b.get('doc_type'):
+        user_docs = list(mongo_db.documents.find({
+            'user_id': current_user.id,
+            'status': 'processed'
+        }).sort('upload_date', -1))
+        return render_template("compare_select.html", documents=user_docs, error="Cannot compare documents of different types.")
+
+    from app.utils.llm import compare_documents
+    comparison = compare_documents(doc_a.get('cleaned_text', ''), doc_b.get('cleaned_text', ''))
+    
+    if not comparison:
+        user_docs = list(mongo_db.documents.find({
+            'user_id': current_user.id,
+            'status': 'processed'
+        }).sort('upload_date', -1))
+        return render_template("compare_select.html", documents=user_docs, error="AI comparison engine timed out. Please try again.")
+
+    return render_template("compare_result.html", doc_a=doc_a, doc_b=doc_b, comparison=comparison)
+
+
+@main.route("/document/<doc_id>/chat", methods=['POST'])
+@login_required
+def chat_with_document(doc_id):
+    """Handle RAG-based chat queries for a specific document."""
+    data = request.get_json() or {}
+    question = data.get('question')
+
+    if not question:
+        return jsonify({'success': False, 'message': 'Question is required.'}), 400
+
+    mongo_db = current_app.config.get('mongo_db')
+    doc = mongo_db.documents.find_one({'doc_id': doc_id})
+
+    if not doc:
+        return jsonify({'success': False, 'message': 'Document not found.'}), 404
+    if doc['user_id'] != current_user.id:
+        return jsonify({'success': False, 'message': 'Permission denied.'}), 403
+
+    from app.utils.rag import get_relevant_chunks
+    import google.generativeai as genai
+
+    # 1. Retrieval
+    relevant_chunks = get_relevant_chunks(doc_id, question, top_k=3)
+    context_text = "\n\n---\n\n".join([c['text'] for c in relevant_chunks])
+
+    if not context_text:
+        return jsonify({
+            'success': True, 
+            'answer': "I'm sorry, I couldn't find any relevant sections in this document to answer that question.",
+            'sources': []
+        })
+
+    # 2. Augmentation & Generation
+    system_prompt = (
+        "You are 'LegalEase AI', an expert legal assistant. Your task is to answer questions about a legal document "
+        "using ONLY the provided context snippets. If the information is not present in the snippets, "
+        "honestly state that the document does not mention it. Do not use outside knowledge. "
+        "Keep your response structured, professional, and clear.\n\n"
+        f"DOCUMENT CONTEXT SNIPPETS:\n{context_text}\n\n"
+        f"USER QUESTION: {question}"
+    )
+
+    try:
+        api_key = current_app.config.get('GEMINI_API_KEY')
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        response = model.generate_content(system_prompt)
+        
+        if not response or not response.text:
+            return jsonify({'success': False, 'message': 'AI failed to generate a response.'}), 500
+
+        return jsonify({
+            'success': True,
+            'answer': response.text,
+            'sources': [c['text'] for c in relevant_chunks]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Chat error: {str(e)}")
+        return jsonify({'success': False, 'message': 'An internal error occurred during chat.'}), 500
+
+
+# --- Notification Routes ---
+
+@main.route("/notifications")
+@login_required
+def notifications():
+    """Display user's notification list."""
+    user_notifications = Notification.get_for_user(current_user.id, limit=50)
+    return render_template("notifications.html", notifications=user_notifications)
+
+
+@main.route("/api/notifications/mark-read/<notification_id>", methods=["POST"])
+@login_required
+def mark_notification_read(notification_id):
+    """Mark a single notification as read."""
+    Notification.mark_as_read(notification_id)
+    return jsonify({'success': True})
+
+
+@main.route("/api/notifications/mark-all-read", methods=["POST"])
+@login_required
+def mark_all_notifications_read():
+    """Mark all notifications as read for the current user."""
+    Notification.mark_all_as_read(current_user.id)
+    return jsonify({'success': True})

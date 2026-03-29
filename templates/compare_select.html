@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Documents - LegalEase{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-5">
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.documents') }}">History</a></li>
+                        <li class="breadcrumb-item active">Select for Comparison</li>
+                    </ol>
+                </nav>
+
+                <h1 class="h2 mb-2 fw-bold">Select Documents to Compare</h1>
+                <p class="text-muted mb-5">Identify differences in terms, obligations, and risk between two compatible agreements.</p>
+                
+                <form action="{{ url_for('main.compare_documents_route') }}" method="POST">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="p-4 border rounded-3 bg-light h-100">
+                                <label for="doc_a" class="form-label fw-bold text-primary small uppercase mb-3 d-block">Document A (Baseline)</label>
+                                <select name="doc_a" id="doc_a" class="form-select form-select-lg" required>
+                                    <option value="" disabled selected>Choose baseline...</option>
+                                    {% for doc in documents %}
+                                        {% if doc.status == 'processed' %}
+                                        <option value="{{ doc.doc_id }}">{{ doc.original_filename }} ({{ doc.doc_type }})</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text mt-3">This document serves as the original reference version.</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-4 border rounded-3 bg-light h-100">
+                                <label for="doc_b" class="form-label fw-bold text-success small uppercase mb-3 d-block">Document B (Comparison)</label>
+                                <select name="doc_b" id="doc_b" class="form-select form-select-lg" required>
+                                    <option value="" disabled selected>Choose comparison...</option>
+                                    {% for doc in documents %}
+                                        {% if doc.status == 'processed' %}
+                                        <option value="{{ doc.doc_id }}">{{ doc.original_filename }} ({{ doc.doc_type }})</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text mt-3">AI will highlight additions and changes made in this version.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 text-center">
+                        <button type="submit" class="btn btn-primary btn-lg px-5 py-3">
+                            <i class="bi bi-intersect"></i> Start Side-by-Side Analysis
+                        </button>
+                    </div>
+                </form>
+
+                {% if error %}
+                <div class="alert alert-danger mt-4" role="alert">
+                    {{ error }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .uppercase { text-transform: uppercase; letter-spacing: 1px; }
+    .breadcrumb-item + .breadcrumb-item::before { content: ">"; }
+</style>
+{% endblock %}
