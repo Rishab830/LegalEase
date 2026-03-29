@@ -280,32 +280,36 @@ def get_analysis(doc_id):
     # We allow the page to load even if status != 'processed'
     # The template will handle showing a placeholder if needed.
 
-    from app.utils.llm import generate_summary, analyze_clauses
-    
-    # Orchesrate missing AI components (ensure caching)
-    summary = doc.get('summary', {})
-    updated = False
-    
-    if 'short' not in summary:
-        res = generate_summary(doc['cleaned_text'], mode='short')
-        if res:
-            summary['short'] = res
-            updated = True
-            
-    if 'detailed' not in summary:
-        res = generate_summary(doc['cleaned_text'], mode='detailed')
-        if res:
-            summary['detailed'] = res
-            updated = True
-            
-    if 'clauses' not in summary:
-        res = analyze_clauses(doc['cleaned_text'])
-        if res:
-            summary['clauses'] = res
-            updated = True
-            
-    if updated:
-        mongo_db.documents.update_one({'doc_id': doc_id}, {'$set': {'summary': summary}})
+    # Lazy initialization for AI components (caching)
+    # ONLY attempt this if processing is complete and text is available
+    if doc.get('status') == 'processed' and 'cleaned_text' in doc:
+        from app.utils.llm import generate_summary, analyze_clauses
+        
+        summary = doc.get('summary', {})
+        updated = False
+        
+        if 'short' not in summary:
+            res = generate_summary(doc['cleaned_text'], mode='short')
+            if res:
+                summary['short'] = res
+                updated = True
+                
+        if 'detailed' not in summary:
+            res = generate_summary(doc['cleaned_text'], mode='detailed')
+            if res:
+                summary['detailed'] = res
+                updated = True
+                
+        if 'clauses' not in summary:
+            res = analyze_clauses(doc['cleaned_text'])
+            if res:
+                summary['clauses'] = res
+                updated = True
+
+        if updated:
+            mongo_db.documents.update_one({'doc_id': doc_id}, {'$set': {'summary': summary}})
+    else:
+        summary = doc.get('summary', {})
 
     return render_template("analysis.html", doc=doc, summary=summary)
 
