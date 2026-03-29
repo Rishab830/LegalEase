@@ -30,6 +30,29 @@
 </div>
 
 <div class="row g-4">
+    {% if doc.status != 'processed' %}
+    <!-- Processing Placeholder -->
+    <div class="col-12 text-center py-5">
+        <div class="card border-0 shadow-sm py-5">
+            <div class="card-body">
+                <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h3 class="fw-bold text-primary">Still Analyzing...</h3>
+                <p class="text-muted">LegalEase AI is currently extracting clauses and calculating risk scores.<br>This page will automatically refresh when the analysis is ready.</p>
+                <div class="progress mx-auto mt-4" style="width: 60%; height: 10px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Auto-refresh every 5 seconds while processing
+        setTimeout(() => {
+            window.location.reload();
+        }, 5000);
+    </script>
+    {% else %}
     <!-- Summary Section -->
     <div class="col-12">
         <div class="card border-0 shadow-sm">
@@ -102,6 +125,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <div class="row mt-4">

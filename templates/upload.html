@@ -53,7 +53,10 @@
 
                 const resJson = await res.json();
                 if (res.ok && resJson.success) {
-                    showMessage(`Upload successful! Document ID: ${resJson.doc_id}`, 'success');
+                    showMessage(`
+                        <strong>Upload successful!</strong> Your document is being analyzed in the background.<br>
+                        <a href="{{ url_for('main.documents') }}" class="btn btn-sm btn-success mt-2">View in Document History</a>
+                    `, 'success');
                     
                     // Display preview
                     const previewContainer = document.getElementById('previewContainer');

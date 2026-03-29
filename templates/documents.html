@@ -57,10 +57,11 @@
                 <td>
                     {% if doc.status == 'processed' %}
                         <span class="badge bg-success">Processed</span>
-                    {% elif doc.status == 'ocr_complete' %}
-                        <span class="badge bg-info">OCR Complete</span>
-                    {% elif doc.status == 'uploaded' %}
-                        <span class="badge bg-warning text-dark">Uploaded</span>
+                    {% elif doc.status in ['uploaded', 'ocr_complete', 're-processing', 'processing'] %}
+                        <span class="badge bg-primary">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Analyzing...
+                        </span>
                     {% else %}
                         <span class="badge bg-light text-dark">{{ doc.status }}</span>
                     {% endif %}

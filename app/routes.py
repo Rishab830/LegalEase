@@ -123,10 +123,16 @@ def upload():
 
         mongo_db.documents.insert_one(document)
 
-        # Trigger Extraction & Cleaning Pipeline (Pass user_id for notifications)
-        run_pipeline(doc_id, file_path, ext, user_id=current_user.id)
+        # Trigger Extraction & Cleaning Pipeline in the background
+        start_background_processing(doc_id, file_path, ext, user_id=current_user.id)
 
-        return jsonify({'success': True, 'doc_id': doc_id, 'filename': stored_filename, 'ext': ext}), 201
+        return jsonify({
+            'success': True, 
+            'message': 'Upload successful! Your document is being analyzed in the background.', 
+            'doc_id': doc_id, 
+            'filename': stored_filename, 
+            'ext': ext
+        }), 202
     except Exception as e:
         current_app.logger.error('Upload error: %s', e)
         return jsonify({'success': False, 'message': 'Upload failed.'}), 500
@@ -193,15 +199,15 @@ def re_analyze_document(doc_id):
         ext = os.path.splitext(doc['stored_filename'])[1].lower().strip('.')
         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], doc['stored_filename'])
 
-        # Reset status and run pipeline
+        # Reset status and run pipeline in the background
         mongo_db.documents.update_one(
             {'doc_id': doc_id},
             {'$set': {'status': 're-processing', 're_analyzed_at': datetime.utcnow()}}
         )
 
-        run_pipeline(doc_id, file_path, ext, user_id=current_user.id)
+        start_background_processing(doc_id, file_path, ext, user_id=current_user.id)
 
-        return jsonify({'success': True, 'message': 'Re-analysis completed successfully.'})
+        return jsonify({'success': True, 'message': 'Re-analysis started in the background.'})
     except Exception as e:
         current_app.logger.error('Re-analyze error: %s', e)
         return jsonify({'success': False, 'message': 'Failed to trigger re-analysis.'}), 500
@@ -271,9 +277,8 @@ def get_analysis(doc_id):
         return "Document not found", 404
     if doc['user_id'] != current_user.id:
         return "Permission denied", 403
-    if doc.get('status') != 'processed':
-        # If not processed, redirect to history list
-        return redirect(url_for('main.documents'))
+    # We allow the page to load even if status != 'processed'
+    # The template will handle showing a placeholder if needed.
 
     from app.utils.llm import generate_summary, analyze_clauses
     
