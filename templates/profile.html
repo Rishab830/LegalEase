@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1 class="mb-4">Profile Settings</h1>
+
+            <!-- Alert for messages -->
+            <div id="alertContainer"></div>
+
+            <!-- User Profile Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Account Information</h5>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm" novalidate>
+                        <!-- Username (read-only) -->
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" 
+                                   value="{{ user.username }}" disabled>
+                            <small class="text-muted">Username cannot be changed</small>
+                        </div>
+
+                        <!-- Display Name -->
+                        <div class="mb-3">
+                            <label for="displayName" class="form-label">Display Name</label>
+                            <input type="text" class="form-control" id="displayName"
+                                   placeholder="Enter your display name (optional)"
+                                   value="{{ user.display_name or '' }}"
+                                   maxlength="100">
+                            <small class="text-muted">Used to personalize your account</small>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" 
+                                   placeholder="Enter your email"
+                                   value="{{ user.email }}" required>
+                            <div class="invalid-feedback">
+                                Please enter a valid email address.
+                            </div>
+                        </div>
+
+                        <!-- Divider -->
+                        <hr class="my-4">
+
+                        <!-- Password Change Section -->
+                        <h5 class="mb-3">Change Password</h5>
+
+                        <!-- Current Password -->
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="currentPassword"
+                                   placeholder="Enter your current password (required to change password)">
+                            <small class="text-muted">Leave blank if not changing password</small>
+                        </div>
+
+                        <!-- New Password -->
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="newPassword"
+                                   placeholder="Enter new password (min. 6 characters)"
+                                   minlength="6">
+                            <small class="text-muted">Leave blank to keep current password</small>
+                        </div>
+
+                        <!-- Confirm New Password -->
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirmPassword"
+                                   placeholder="Confirm new password"
+                                   minlength="6">
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <span id="submitText">Save Changes</span>
+                                <span id="submitSpinner" class="spinner-border spinner-border-sm ms-2" 
+                                      role="status" aria-hidden="true" style="display: none;"></span>
+                            </button>
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Account Info Card -->
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">Account Details</h6>
+                    <p class="mb-1"><strong>Member Since:</strong> 
+                        <span>{{ user.created_at.strftime('%B %d, %Y') if user.created_at else 'N/A' }}</span>
+                    </p>
+                    <p class="mb-0"><strong>Account Type:</strong> 
+                        <span class="badge bg-info">{{ user.role | capitalize }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('profileForm');
+    const alertContainer = document.getElementById('alertContainer');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitText = document.getElementById('submitText');
+    const submitSpinner = document.getElementById('submitSpinner');
+    const messageTimeout = 5000; // 5 seconds
+
+    // Display alert message
+    function showAlert(message, type = 'success') {
+        const alertId = `alert-${Date.now()}`;
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert" id="${alertId}">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        alertContainer.innerHTML = alertHtml;
+        
+        // Auto-dismiss after timeout
+        setTimeout(() => {
+            const alertElement = document.getElementById(alertId);
+            if (alertElement) {
+                alertElement.remove();
+            }
+        }, messageTimeout);
+    }
+
+    // Validate form
+    function validateForm() {
+        const newPassword = document.getElementById('newPassword').value;
+        const currentPassword = document.getElementById('currentPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const email = document.getElementById('email').value;
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showAlert('Please enter a valid email address.', 'danger');
+            return false;
+        }
+
+        // Password change validation
+        if (newPassword || currentPassword || confirmPassword) {
+            if (!currentPassword) {
+                showAlert('Current password is required to change password.', 'danger');
+                return false;
+            }
+
+            if (!newPassword) {
+                showAlert('New password is required.', 'danger');
+                return false;
+            }
+
+            if (newPassword.length < 6) {
+                showAlert('New password must be at least 6 characters long.', 'danger');
+                return false;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showAlert('New passwords do not match.', 'danger');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // Handle form submission
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Client-side validation
+        if (!validateForm()) {
+            return;
+        }
+
+        // Disable button and show spinner
+        submitBtn.disabled = true;
+        submitText.style.display = 'none';
+        submitSpinner.style.display = 'inline-block';
+
+        try {
+            // Prepare data
+            const formData = {
+                display_name: document.getElementById('displayName').value || null,
+                email: document.getElementById('email').value,
+                current_password: document.getElementById('currentPassword').value || null,
+                new_password: document.getElementById('newPassword').value || null,
+                confirm_password: document.getElementById('confirmPassword').value || null
+            };
+
+            // Send PATCH request
+            const response = await fetch('{{ url_for("auth.profile") }}', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                showAlert(result.message, 'success');
+                // Clear password fields on success
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            } else {
+                showAlert(result.message || 'An error occurred.', 'danger');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('Network error. Please try again.', 'danger');
+        } finally {
+            // Re-enable button and hide spinner
+            submitBtn.disabled = false;
+            submitText.style.display = 'inline';
+            submitSpinner.style.display = 'none';
+        }
+    });
+
+    // Real-time email validation
+    document.getElementById('email').addEventListener('blur', function() {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (this.value && !emailRegex.test(this.value)) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+
+    // Password confirmation validation
+    document.getElementById('confirmPassword').addEventListener('input', function() {
+        const newPassword = document.getElementById('newPassword').value;
+        if (this.value && newPassword && this.value !== newPassword) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+</script>
+
+<style>
+    .form-control.is-invalid {
+        border-color: #dc3545;
+    }
+</style>
+{% endblock %}

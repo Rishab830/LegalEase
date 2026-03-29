@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - LegalEase{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Welcome, {{ user.username }}!</h2>
+        <p class="lead">Your legal document analysis dashboard</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Upload Documents</h5>
+                <p class="card-text">Upload and analyze your legal documents</p>
+                <a href="{{ url_for('main.upload') }}" class="btn btn-primary">Upload Now</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Document History</h5>
+                <p class="card-text">View your uploaded documents</p>
+                <a href="{{ url_for('auth.profile') }}" class="btn btn-primary">Go to Profile</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Profile</h5>
+                <p class="card-text">Manage your account settings</p>
+                <a href="{{ url_for('auth.profile') }}" class="btn btn-primary">Go to Profile</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
