@@ -24,7 +24,8 @@ def create_app():
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
     mongo_client = MongoClient(app.config["MONGO_URI"])
-    mongo_db = mongo_client.get_default_database()
+    # Use 'legalease' as fallback if no database is specified in the URI
+    mongo_db = mongo_client.get_default_database('legalease')
     
     # Store mongo_db in app config for access in app context
     app.config['mongo_db'] = mongo_db
