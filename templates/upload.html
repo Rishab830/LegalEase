@@ -14,6 +14,7 @@
                 <button type="submit" class="btn btn-primary">Upload</button>
             </form>
             <div id="message" class="mt-3"></div>
+            <div id="previewContainer" class="mt-4" style="display: none;"></div>
         </div>
     </div>
 
@@ -45,7 +46,7 @@
             formData.append('document', file);
 
             try {
-                const res = await fetch('{{ url_for('main.upload') }}', {
+                const res = await fetch("{{ url_for('main.upload') }}", {
                     method: 'POST',
                     body: formData
                 });
@@ -53,6 +54,39 @@
                 const resJson = await res.json();
                 if (res.ok && resJson.success) {
                     showMessage(`Upload successful! Document ID: ${resJson.doc_id}`, 'success');
+                    
+                    // Display preview
+                    const previewContainer = document.getElementById('previewContainer');
+                    previewContainer.style.display = 'block';
+                    
+                    // Generate base URL via url_for, and append filename
+                    const baseUrl = "{{ url_for('main.get_uploaded_file', filename='PLACEHOLDER') }}".replace('PLACEHOLDER', '');
+                    const fileUrl = baseUrl + resJson.filename;
+                    
+                    if (resJson.ext === 'pdf') {
+                        previewContainer.innerHTML = `
+                            <div class="card border-primary shadow-sm" style="cursor: pointer;" onclick="window.open('${fileUrl}', '_blank')">
+                                <div class="card-body text-center p-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-file-earmark-pdf text-danger mb-3" viewBox="0 0 16 16">
+                                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                                        <path d="M4.603 14.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.697 19.697 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a10.954 10.954 0 0 0 .98 1.686 5.753 5.753 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.712 5.712 0 0 1-.911-.95 11.651 11.651 0 0 0-1.997.406 11.307 11.307 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.793.793 0 0 1-.58.029zm1.379-1.901c-.166.076-.32.156-.459.238-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361.01.022.02.036.026.044a.266.266 0 0 0 .086.08L5.5 13.5l.044-.016c.203-.09.475-.276.716-.502a10.42 10.42 0 0 1-.279-.995zm1.5-3.134a16.878 16.878 0 0 1-.84 1.758 10.824 10.824 0 0 1 1.258.468c.27-.375.522-.767.75-1.164A10.292 10.292 0 0 0 7.482 9.052zm1.61-3.696c-.053-.205-.108-.39-.161-.532-.053-.141-.108-.258-.16-.322a.2.2 0 0 0-.15-.08.17.17 0 0 0-.14.07c-.035.06-.056.16-.062.29-.009.186.01.411.05.65.04.24.1.488.17.72.08-.22.15-.43.2-.624l.003-.01v-.006c0-.005 0-.012 0-.019zm1.26.851c-.156.09-.365.176-.62.254-.158.048-.326.092-.505.133.262.186.516.357.755.512.235.15.452.285.642.4.11.066.216.113.31.14.095.027.185.034.254.02.046-.01.085-.035.114-.075.028-.04.04-.092.035-.152-.005-.058-.024-.118-.052-.178-.027-.06-.067-.122-.119-.186a1.956 1.956 0 0 0-.615-.668z"/>
+                                    </svg>
+                                    <h5 class="card-title text-primary">PDF Document Uploaded</h5>
+                                    <p class="card-text text-muted mb-0">Click here to preview the full document in a new tab</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        previewContainer.innerHTML = `
+                            <div class="card border-primary shadow-sm" style="cursor: pointer;" onclick="window.open('${fileUrl}', '_blank')" title="Click to view full image">
+                                <img src="${fileUrl}" class="card-img-top" alt="Document Preview" style="max-height: 250px; object-fit: contain; background: #f8f9fa; padding: 10px;">
+                                <div class="card-body text-center py-2">
+                                    <p class="card-text text-muted mb-0"><small>Click image to view full size</small></p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
                 } else {
                     showMessage(resJson.message || 'Upload failed.', 'danger');
                 }

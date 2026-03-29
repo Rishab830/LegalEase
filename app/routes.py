@@ -2,7 +2,7 @@ import os
 from uuid import uuid4
 from datetime import datetime
 
-from flask import Blueprint, render_template, current_app, jsonify, request
+from flask import Blueprint, render_template, current_app, jsonify, request, send_from_directory
 from flask_login import login_required, current_user
 
 main = Blueprint("main", __name__)
@@ -113,7 +113,13 @@ def upload():
 
         mongo_db.documents.insert_one(document)
 
-        return jsonify({'success': True, 'doc_id': doc_id}), 201
+        return jsonify({'success': True, 'doc_id': doc_id, 'filename': stored_filename, 'ext': ext}), 201
     except Exception as e:
         current_app.logger.error('Upload error: %s', e)
         return jsonify({'success': False, 'message': 'Upload failed.'}), 500
+
+@main.route('/uploads/<filename>')
+@login_required
+def get_uploaded_file(filename):
+    """Serve the uploaded files."""
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
