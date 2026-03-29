@@ -16,4 +16,4 @@ COPY . .
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["gunicorn", "run:app", "--bind", "0.0.0.0:10000"]
+CMD gunicorn run:app --bind 0.0.0.0:${PORT:-10000}
