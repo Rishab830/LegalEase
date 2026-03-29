@@ -4,6 +4,7 @@ from datetime import datetime
 
 from flask import Blueprint, render_template, current_app, jsonify, request, send_from_directory
 from flask_login import login_required, current_user
+from app.utils.ocr import perform_ocr
 
 main = Blueprint("main", __name__)
 
@@ -112,6 +113,14 @@ def upload():
         }
 
         mongo_db.documents.insert_one(document)
+
+        # Trigger OCR for image uploads
+        if ext in {'png', 'jpg', 'jpeg'}:
+            raw_text, ocr_status = perform_ocr(file_path)
+            mongo_db.documents.update_one(
+                {'doc_id': doc_id},
+                {'$set': {'raw_text': raw_text, 'status': ocr_status}}
+            )
 
         return jsonify({'success': True, 'doc_id': doc_id, 'filename': stored_filename, 'ext': ext}), 201
     except Exception as e:
