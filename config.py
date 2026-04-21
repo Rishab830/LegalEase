@@ -7,7 +7,9 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-this")
-    MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://ayushjdaniel_db_user:FDVUUNywx5XHTGUG@cluster0.0r9zkql.mongodb.net/?appName=Cluster0")
+    # MONGO_URI is required - set via environment variable or .env file
+    # Example: mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
+    MONGO_URI = os.getenv("MONGO_URI")
     _default_upload = os.getenv("UPLOAD_FOLDER", "uploads")
     UPLOAD_FOLDER = _default_upload if os.path.isabs(_default_upload) else os.path.join(basedir, _default_upload)
     TESSERACT_CMD = os.getenv("TESSERACT_CMD", "tesseract")
