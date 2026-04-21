@@ -78,7 +78,7 @@ class TestRAGInterface:
         assert cosine_similarity(v1, v_zero) == 0.0
 
     @patch('app.utils.rag.get_embedding')
-    @patch('google.generativeai.GenerativeModel.generate_content')
+    @patch('google.genai.Client.models')
     def test_end_to_end_chat_endpoint(self, mock_gen, mock_embed, client, app):
         """Verify that the chat endpoint retrieves context and generates an answer."""
         user = register_and_login(client)

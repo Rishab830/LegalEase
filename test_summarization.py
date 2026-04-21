@@ -58,7 +58,7 @@ def register_and_login(client):
 class TestSummarization:
     """Test summarization route, caching, and LLM integration."""
     
-    @patch('google.generativeai.GenerativeModel.generate_content')
+    @patch('google.genai.Client.models')
     def test_short_summary_generation_and_caching(self, mock_gen, client, app):
         """Verify short summary logic, sentence count, and MongoDB caching."""
         user = register_and_login(client)
@@ -97,7 +97,7 @@ class TestSummarization:
         # Ensure only one API call was made
         assert mock_gen.call_count == 1
 
-    @patch('google.generativeai.GenerativeModel.generate_content')
+    @patch('google.genai.Client.models')
     def test_detailed_summary_parsing(self, mock_gen, client, app):
         """Verify detailed summary returns correct JSON keys."""
         user = register_and_login(client)

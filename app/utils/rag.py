@@ -1,4 +1,4 @@
-import google.generativeai as genai
+from google import genai
 import numpy as np
 import re
 from flask import current_app
@@ -43,14 +43,14 @@ def get_embedding(text, task_type="retrieval_document"):
         return None
         
     try:
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
         # Using text-embedding-004
-        result = genai.embed_content(
+        result = client.models.embed_content(
             model="models/text-embedding-004",
             content=text,
             task_type=task_type
         )
-        return result['embedding']
+        return result.embedding
     except Exception as e:
         current_app.logger.error(f"Gemini Embedding failed: {str(e)}")
         return None

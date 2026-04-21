@@ -413,7 +413,7 @@ def chat_with_document(doc_id):
         return jsonify({'success': False, 'message': 'Permission denied.'}), 403
 
     from app.utils.rag import get_relevant_chunks
-    import google.generativeai as genai
+    from google import genai
 
     # 1. Retrieval
     relevant_chunks = get_relevant_chunks(doc_id, question, top_k=3)
@@ -438,12 +438,14 @@ def chat_with_document(doc_id):
 
     try:
         api_key = current_app.config.get('GEMINI_API_KEY')
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        client = genai.Client(api_key=api_key)
         
-        response = model.generate_content(system_prompt)
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=[system_prompt]
+        )
         
-        if not response or not response.text:
+        if not response or not hasattr(response, 'text') or not response.text:
             return jsonify({'success': False, 'message': 'AI failed to generate a response.'}), 500
 
         return jsonify({
