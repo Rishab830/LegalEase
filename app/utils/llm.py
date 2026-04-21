@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types  # Optional, for advanced types if needed
 import json
 import re
 from flask import current_app
@@ -17,9 +18,7 @@ def generate_summary(text, mode='short'):
         return None
         
     try:
-        genai.configure(api_key=api_key)
-        # Using gemini-1.5-flash for cost/speed efficiency in testing
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        client = genai.Client(api_key=api_key)
         
         if mode == 'short':
             prompt = (
@@ -36,10 +35,14 @@ def generate_summary(text, mode='short'):
                 "Return ONLY the raw JSON object, no introductory or concluding text.\n\n"
                 f"DOCUMENT TEXT:\n{text}"
             )
-            
-        response = model.generate_content(prompt)
         
-        if not response or not response.text:
+        contents = [prompt]  # Pass as a list
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",  # Updated model; change if "gemini-2.0-flash" is available
+            contents=contents
+        )
+        
+        if not response or not hasattr(response, 'text') or not response.text:
             current_app.logger.error("Empty response received from Gemini API.")
             return None
             
@@ -82,8 +85,7 @@ def analyze_clauses(text):
         return None
         
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        client = genai.Client(api_key=api_key)
         
         prompt = (
             "Analyze the following legal document and identify 3 to 5 critical legal clauses that require attention. "
@@ -93,8 +95,13 @@ def analyze_clauses(text):
             f"DOCUMENT TEXT:\n{text}"
         )
         
-        response = model.generate_content(prompt)
-        if not response or not response.text:
+        contents = [prompt]
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=contents
+        )
+        
+        if not response or not hasattr(response, 'text') or not response.text:
             return None
             
         content = response.text.strip()
@@ -131,8 +138,7 @@ def compare_documents(text_a, text_b):
         return None
         
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        client = genai.Client(api_key=api_key)
         
         prompt = (
             "You are a legal auditor comparing two versions/excerpts of a document: 'Document A' and 'Document B'. "
@@ -146,8 +152,13 @@ def compare_documents(text_a, text_b):
             f"DOCUMENT B:\n{text_b}"
         )
         
-        response = model.generate_content(prompt)
-        if not response or not response.text:
+        contents = [prompt]
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=contents
+        )
+        
+        if not response or not hasattr(response, 'text') or not response.text:
             return None
             
         content = response.text.strip()

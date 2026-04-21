@@ -1,8 +1,0 @@
-﻿============================= test session starts =============================
-platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- D:\Sem6\LegalEase\venv\Scripts\python.exe
-cachedir: .pytest_cache
-rootdir: D:\Sem6\LegalEase
-collecting ... collected 4 items
-
-test_rag.py::TestRAGInterface::test_text_chunking_and_overlap FAILED     [ 25%]
-test_rag.py::TestRAGInterface::test_cosine_similarity_edge_cases PASSED  [ 50%]
