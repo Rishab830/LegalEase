@@ -3,101 +3,178 @@
 {% block title %}Upload Document - LegalEase{% endblock %}
 
 {% block content %}
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <h1>Upload Document</h1>
-            <form id="uploadForm" method="POST" action="{{ url_for('main.upload') }}" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="document" class="form-label">Choose document (PDF, PNG, JPG)</label>
-                    <input type="file" class="form-control" id="document" name="document" accept="application/pdf,image/png,image/jpeg" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Upload</button>
-            </form>
-            <div id="message" class="mt-3"></div>
-            <div id="previewContainer" class="mt-4" style="display: none;"></div>
+<div class="row justify-content-center py-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="card-header bg-primary text-white text-center py-4">
+                <h3 class="fw-bold mb-0">Upload Document</h3>
+                <p class="text-white-50 small mb-0">Support for PDF, PNG, and JPG</p>
+            </div>
+            <div class="card-body p-4 p-md-5">
+                <form id="uploadForm" method="POST" action="{{ url_for('main.upload') }}" enctype="multipart/form-data">
+                    <div class="upload-area mb-4 text-center border-2 border-dashed rounded-4 p-5 position-relative bg-light transition-hover" id="dropZone">
+                        <div class="mb-3 text-primary opacity-50">
+                            <i class="fas fa-file-upload fa-4x"></i>
+                        </div>
+                        <h5 class="fw-bold">Click or drag file here</h5>
+                        <p class="text-muted small">Max file size: 10MB</p>
+                        <input type="file" class="form-control position-absolute top-0 start-0 opacity-0 w-100 h-100 cursor-pointer" id="document" name="document" accept="application/pdf,image/png,image/jpeg" required style="cursor: pointer;">
+                    </div>
+                    
+                    <div id="fileSelection" class="alert alert-info d-none mb-4 d-flex align-items-center">
+                        <i class="fas fa-check-circle me-3 fa-lg text-success"></i>
+                        <div class="flex-grow-1">
+                            <strong class="d-block text-dark">File Selected:</strong>
+                            <span id="selectedFileName" class="small text-muted"></span>
+                        </div>
+                        <button type="button" class="btn-close" id="clearFile" style="font-size: 0.7rem;"></button>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-sm py-3 fw-bold" id="submitBtn">
+                            Analyze Document <i class="fas fa-magic ms-2"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <div id="message" class="mt-4"></div>
+            </div>
         </div>
+
+        <div id="previewContainer" class="mt-5" style="display: none;"></div>
     </div>
+</div>
 
-    <script>
-        const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg'];
-        const uploadForm = document.getElementById('uploadForm');
-        const documentInput = document.getElementById('document');
-        const message = document.getElementById('message');
+<style>
+.border-dashed {
+    border-style: dashed !important;
+}
+.transition-hover {
+    transition: all 0.2s ease;
+}
+.upload-area:hover {
+    background-color: #e9ecef !important;
+    border-color: #0d6efd !important;
+}
+.cursor-pointer {
+    cursor: pointer;
+}
+</style>
 
-        function showMessage(text, style) {
-            message.innerHTML = `<div class="alert alert-${style}" role="alert">${text}</div>`;
+<script>
+    const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg'];
+    const uploadForm = document.getElementById('uploadForm');
+    const documentInput = document.getElementById('document');
+    const message = document.getElementById('message');
+    const dropZone = document.getElementById('dropZone');
+    const fileSelection = document.getElementById('fileSelection');
+    const selectedFileName = document.getElementById('selectedFileName');
+    const clearFile = document.getElementById('clearFile');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // UI helper for selected file
+    documentInput.addEventListener('change', function() {
+        if (this.files && this.files.length > 0) {
+            selectedFileName.textContent = this.files[0].name;
+            fileSelection.classList.remove('d-none');
+            dropZone.classList.add('d-none');
+        }
+    });
+
+    clearFile.addEventListener('click', () => {
+        documentInput.value = '';
+        fileSelection.classList.add('d-none');
+        dropZone.classList.remove('d-none');
+    });
+
+    function showMessage(text, style) {
+        message.innerHTML = `<div class="alert alert-${style} shadow-sm rounded-3 py-3" role="alert">${text}</div>`;
+    }
+
+    uploadForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const file = documentInput.files[0];
+        if (!file) {
+            showMessage('Please select a file.', 'danger');
+            return;
         }
 
-        uploadForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const file = documentInput.files[0];
-            if (!file) {
-                showMessage('Please select a file.', 'danger');
-                return;
-            }
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!allowedExtensions.includes(ext)) {
+            showMessage('Invalid file type. Only PDF, PNG, JPG are allowed.', 'danger');
+            return;
+        }
 
-            const ext = file.name.split('.').pop().toLowerCase();
-            if (!allowedExtensions.includes(ext)) {
-                showMessage('Invalid file type. Only PDF, PNG, JPG are allowed.', 'danger');
-                return;
-            }
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Analyzing...';
 
-            const formData = new FormData();
-            formData.append('document', file);
+        const formData = new FormData();
+        formData.append('document', file);
 
-            try {
-                const res = await fetch("{{ url_for('main.upload') }}", {
-                    method: 'POST',
-                    body: formData
-                });
+        try {
+            const res = await fetch("{{ url_for('main.upload') }}", {
+                method: 'POST',
+                body: formData
+            });
 
-                const resJson = await res.json();
-                if (res.ok && resJson.success) {
-                    showMessage(`
-                        <strong>Upload successful!</strong> Your document is being analyzed in the background.<br>
-                        <a href="{{ url_for('main.documents') }}" class="btn btn-sm btn-success mt-2">View in Document History</a>
-                    `, 'success');
-                    
-                    // Display preview
-                    const previewContainer = document.getElementById('previewContainer');
-                    previewContainer.style.display = 'block';
-                    
-                    // Generate base URL via url_for, and append filename
-                    const baseUrl = "{{ url_for('main.get_uploaded_file', filename='PLACEHOLDER') }}".replace('PLACEHOLDER', '');
-                    const fileUrl = baseUrl + resJson.filename;
-                    
-                    if (resJson.ext === 'pdf') {
-                        previewContainer.innerHTML = `
-                            <div class="card border-primary shadow-sm mb-4">
-                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                    <strong>PDF Preview</strong>
-                                    <button class="btn btn-sm btn-light" onclick="window.open('${fileUrl}', '_blank')">View Full Screen</button>
-                                </div>
-                                <div class="card-body p-0">
-                                    <embed src="${fileUrl}" type="application/pdf" width="100%" height="500px" style="display: block; border: none;" />
-                                </div>
+            const resJson = await res.json();
+            if (res.ok && resJson.success) {
+                showMessage(`
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <strong class="d-block mb-1">Upload successful!</strong>
+                            <span class="small text-muted">Your document is being analyzed in the background.</span>
+                        </div>
+                        <a href="{{ url_for('main.documents') }}" class="btn btn-success btn-sm rounded-pill px-3">View History</a>
+                    </div>
+                `, 'success');
+                
+                // Display preview
+                const previewContainer = document.getElementById('previewContainer');
+                previewContainer.style.display = 'block';
+                
+                const baseUrl = "{{ url_for('main.get_uploaded_file', filename='PLACEHOLDER') }}".replace('PLACEHOLDER', '');
+                const fileUrl = baseUrl + resJson.filename;
+                
+                if (resJson.ext === 'pdf') {
+                    previewContainer.innerHTML = `
+                        <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4">
+                            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                                <h6 class="mb-0 fw-bold">PDF Preview</h6>
+                                <button class="btn btn-sm btn-outline-light rounded-pill" onclick="window.open('${fileUrl}', '_blank')">Full Screen</button>
                             </div>
-                        `;
-                    } else {
-                        previewContainer.innerHTML = `
-                            <div class="card border-primary shadow-sm mb-4">
-                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                    <strong>Image Preview</strong>
-                                    <button class="btn btn-sm btn-light" onclick="window.open('${fileUrl}', '_blank')">View Full Size</button>
-                                </div>
-                                <div class="card-body text-center p-0 bg-light">
-                                    <img src="${fileUrl}" alt="Document Preview" style="max-width: 100%; max-height: 500px; object-fit: contain;">
-                                </div>
+                            <div class="card-body p-0">
+                                <embed src="${fileUrl}" type="application/pdf" width="100%" height="500px" style="display: block; border: none;" />
                             </div>
-                        `;
-                    }
-                    
+                        </div>
+                    `;
                 } else {
-                    showMessage(resJson.message || 'Upload failed.', 'danger');
+                    previewContainer.innerHTML = `
+                        <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4">
+                            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                                <h6 class="mb-0 fw-bold">Image Preview</h6>
+                                <button class="btn btn-sm btn-outline-light rounded-pill" onclick="window.open('${fileUrl}', '_blank')">Full Size</button>
+                            </div>
+                            <div class="card-body text-center p-0 bg-light">
+                                <img src="${fileUrl}" alt="Document Preview" style="max-width: 100%; max-height: 500px; object-fit: contain;">
+                            </div>
+                        </div>
+                    `;
                 }
-            } catch (err) {
-                showMessage('Upload error. Please try again.', 'danger');
+                
+                submitBtn.innerHTML = 'Analyze Another <i class="fas fa-plus ms-2"></i>';
+                submitBtn.disabled = false;
+                
+            } else {
+                showMessage(resJson.message || 'Upload failed.', 'danger');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Analyze Document <i class="fas fa-magic ms-2"></i>';
             }
-        });
-    </script>
+        } catch (err) {
+            showMessage('Upload error. Please try again.', 'danger');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Analyze Document <i class="fas fa-magic ms-2"></i>';
+        }
+    });
+</script>
 {% endblock %}

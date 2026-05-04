@@ -1,104 +1,128 @@
 {% extends "base.html" %}
 
+{% block title %}Profile Settings - LegalEase{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <h1 class="mb-4">Profile Settings</h1>
+<div class="row justify-content-center py-4">
+    <div class="col-lg-8">
+        <div class="d-flex align-items-center mb-4">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 56px; height: 56px;">
+                <i class="fas fa-user-circle fa-2x"></i>
+            </div>
+            <div>
+                <h2 class="fw-bold mb-0">Profile Settings</h2>
+                <p class="text-muted mb-0">Manage your personal information and security</p>
+            </div>
+        </div>
 
-            <!-- Alert for messages -->
-            <div id="alertContainer"></div>
+        <!-- Alert for messages -->
+        <div id="alertContainer"></div>
 
-            <!-- User Profile Form -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Account Information</h5>
-                </div>
-                <div class="card-body">
-                    <form id="profileForm" novalidate>
-                        <!-- Username (read-only) -->
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" 
-                                   value="{{ user.username }}" disabled>
-                            <small class="text-muted">Username cannot be changed</small>
-                        </div>
-
-                        <!-- Display Name -->
-                        <div class="mb-3">
-                            <label for="displayName" class="form-label">Display Name</label>
-                            <input type="text" class="form-control" id="displayName"
-                                   placeholder="Enter your display name (optional)"
-                                   value="{{ user.display_name or '' }}"
-                                   maxlength="100">
-                            <small class="text-muted">Used to personalize your account</small>
-                        </div>
-
-                        <!-- Email -->
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email Address</label>
-                            <input type="email" class="form-control" id="email" 
-                                   placeholder="Enter your email"
-                                   value="{{ user.email }}" required>
-                            <div class="invalid-feedback">
-                                Please enter a valid email address.
+        <div class="row g-4">
+            <div class="col-md-8">
+                <!-- User Profile Form -->
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                    <div class="card-header bg-white py-3 border-bottom-0">
+                        <h5 class="fw-bold mb-0">Account Information</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="profileForm" novalidate>
+                            <!-- Username (read-only) -->
+                            <div class="mb-4">
+                                <label for="username" class="form-label fw-bold small text-uppercase tracking-wider">Username</label>
+                                <input type="text" class="form-control bg-light border-0 py-2" id="username" 
+                                       value="{{ user.username }}" disabled>
+                                <small class="text-muted">Username cannot be changed</small>
                             </div>
-                        </div>
 
-                        <!-- Divider -->
-                        <hr class="my-4">
+                            <!-- Display Name -->
+                            <div class="mb-4">
+                                <label for="displayName" class="form-label fw-bold small text-uppercase tracking-wider">Display Name</label>
+                                <input type="text" class="form-control bg-light border-0 py-2" id="displayName"
+                                       placeholder="Enter your display name"
+                                       value="{{ user.display_name or '' }}"
+                                       maxlength="100">
+                                <small class="text-muted">Used to personalize your account</small>
+                            </div>
 
-                        <!-- Password Change Section -->
-                        <h5 class="mb-3">Change Password</h5>
+                            <!-- Email -->
+                            <div class="mb-4">
+                                <label for="email" class="form-label fw-bold small text-uppercase tracking-wider">Email Address</label>
+                                <input type="email" class="form-control bg-light border-0 py-2" id="email" 
+                                       placeholder="name@example.com"
+                                       value="{{ user.email }}" required>
+                                <div class="invalid-feedback">
+                                    Please enter a valid email address.
+                                </div>
+                            </div>
 
-                        <!-- Current Password -->
-                        <div class="mb-3">
-                            <label for="currentPassword" class="form-label">Current Password</label>
-                            <input type="password" class="form-control" id="currentPassword"
-                                   placeholder="Enter your current password (required to change password)">
-                            <small class="text-muted">Leave blank if not changing password</small>
-                        </div>
+                            <hr class="my-5 opacity-25">
 
-                        <!-- New Password -->
-                        <div class="mb-3">
-                            <label for="newPassword" class="form-label">New Password</label>
-                            <input type="password" class="form-control" id="newPassword"
-                                   placeholder="Enter new password (min. 6 characters)"
-                                   minlength="6">
-                            <small class="text-muted">Leave blank to keep current password</small>
-                        </div>
+                            <!-- Password Change Section -->
+                            <h5 class="fw-bold mb-4">Security & Password</h5>
 
-                        <!-- Confirm New Password -->
-                        <div class="mb-3">
-                            <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                            <input type="password" class="form-control" id="confirmPassword"
-                                   placeholder="Confirm new password"
-                                   minlength="6">
-                        </div>
+                            <!-- Current Password -->
+                            <div class="mb-4">
+                                <label for="currentPassword" class="form-label fw-bold small text-uppercase tracking-wider">Current Password</label>
+                                <input type="password" class="form-control bg-light border-0 py-2" id="currentPassword"
+                                       placeholder="Required to make changes">
+                                <small class="text-muted">Required even if only changing email/display name</small>
+                            </div>
 
-                        <!-- Form Actions -->
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary" id="submitBtn">
-                                <span id="submitText">Save Changes</span>
-                                <span id="submitSpinner" class="spinner-border spinner-border-sm ms-2" 
-                                      role="status" aria-hidden="true" style="display: none;"></span>
-                            </button>
-                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Cancel</a>
-                        </div>
-                    </form>
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <label for="newPassword" class="form-label fw-bold small text-uppercase tracking-wider">New Password</label>
+                                    <input type="password" class="form-control bg-light border-0 py-2" id="newPassword"
+                                           placeholder="Min. 6 characters"
+                                           minlength="6">
+                                </div>
+
+                                <div class="col-md-6 mb-4">
+                                    <label for="confirmPassword" class="form-label fw-bold small text-uppercase tracking-wider">Confirm New</label>
+                                    <input type="password" class="form-control bg-light border-0 py-2" id="confirmPassword"
+                                           placeholder="Confirm new password"
+                                           minlength="6">
+                                </div>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" id="submitBtn">
+                                    <span id="submitText">Save Changes</span>
+                                    <span id="submitSpinner" class="spinner-border spinner-border-sm ms-2" 
+                                          role="status" aria-hidden="true" style="display: none;"></span>
+                                </button>
+                                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
 
-            <!-- Account Info Card -->
-            <div class="card bg-light">
-                <div class="card-body">
-                    <h6 class="card-title">Account Details</h6>
-                    <p class="mb-1"><strong>Member Since:</strong> 
-                        <span>{{ user.created_at.strftime('%B %d, %Y') if user.created_at else 'N/A' }}</span>
-                    </p>
-                    <p class="mb-0"><strong>Account Type:</strong> 
-                        <span class="badge bg-info">{{ user.role | capitalize }}</span>
-                    </p>
+            <div class="col-md-4">
+                <!-- Account Info Card -->
+                <div class="card border-0 shadow-sm rounded-4 bg-light mb-4">
+                    <div class="card-body p-4 text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-info-circle fa-2x text-muted"></i>
+                        </div>
+                        <h6 class="fw-bold mb-3">Account Details</h6>
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Member Since:</span>
+                            <span class="fw-bold">{{ user.created_at.strftime('%B %d, %Y') if user.created_at else 'N/A' }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">Account Type:</span>
+                            <span class="badge bg-primary rounded-pill">{{ user.role | capitalize }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4 bg-primary text-white">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-3"><i class="fas fa-shield-alt me-2"></i>Data Privacy</h6>
+                        <p class="small mb-0 opacity-75">Your data is stored securely in your private cloud cluster. We use AI models to analyze your text, but we don't store your documents longer than necessary.</p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,17 +1,24 @@
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f5f7fb;
-    color: #222;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 .container {
     max-width: 800px;
     margin: 80px auto;
     padding: 32px;
-    background: white;
     border-radius: 12px;
+}
+
+/* Adjust card-like containers for dark mode compatibility */
+[data-bs-theme="light"] .container {
+    background: white;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="dark"] .container {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
 }
 
 h1 {

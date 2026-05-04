@@ -3,40 +3,61 @@
 {% block title %}Dashboard - LegalEase{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2>Welcome, {{ user.username }}!</h2>
-        <p class="lead">Your legal document analysis dashboard</p>
+<div class="row mb-5">
+    <div class="col-12 text-center text-md-start">
+        <h2 class="fw-bold mb-1">Welcome back, {{ user.username }}! 👋</h2>
+        <p class="text-muted lead">Here is what is happening with your legal documents today.</p>
     </div>
 </div>
 
-<div class="row mt-4">
+<div class="row g-4">
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
-                <h5 class="card-title">Upload Documents</h5>
-                <p class="card-text">Upload and analyze your legal documents</p>
-                <a href="{{ url_for('main.upload') }}" class="btn btn-primary">Upload Now</a>
+        <div class="card h-100 border-0 shadow-sm dashboard-card transition-hover">
+            <div class="card-body text-center p-4 d-flex flex-column">
+                <div class="mb-3 text-primary">
+                    <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                </div>
+                <h5 class="card-title fw-bold">Upload Documents</h5>
+                <p class="card-text text-muted mb-4">Securely upload and analyze your contracts, NDAs, and agreements.</p>
+                <a href="{{ url_for('main.upload') }}" class="btn btn-primary mt-auto rounded-pill px-4">Upload Now</a>
             </div>
         </div>
     </div>
+    
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
-                <h5 class="card-title">Document History</h5>
-                <p class="card-text">View your uploaded documents</p>
-                <a href="{{ url_for('main.documents') }}" class="btn btn-primary">View History</a>
+        <div class="card h-100 border-0 shadow-sm dashboard-card transition-hover">
+            <div class="card-body text-center p-4 d-flex flex-column">
+                <div class="mb-3 text-success">
+                    <i class="fas fa-folder-open fa-3x"></i>
+                </div>
+                <h5 class="card-title fw-bold">Document History</h5>
+                <p class="card-text text-muted mb-4">Access your previously analyzed documents, risk scores, and summaries.</p>
+                <a href="{{ url_for('main.documents') }}" class="btn btn-outline-success mt-auto rounded-pill px-4">View History</a>
             </div>
         </div>
     </div>
+    
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
-                <h5 class="card-title">Profile</h5>
-                <p class="card-text">Manage your account settings</p>
-                <a href="{{ url_for('auth.profile') }}" class="btn btn-primary">Go to Profile</a>
+        <div class="card h-100 border-0 shadow-sm dashboard-card transition-hover">
+            <div class="card-body text-center p-4 d-flex flex-column">
+                <div class="mb-3 text-info">
+                    <i class="fas fa-user-cog fa-3x"></i>
+                </div>
+                <h5 class="card-title fw-bold">Account Profile</h5>
+                <p class="card-text text-muted mb-4">Manage your account settings, preferences, and security details.</p>
+                <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-info mt-auto rounded-pill px-4">Manage Profile</a>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.transition-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.transition-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+</style>
 {% endblock %}
