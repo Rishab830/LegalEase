@@ -12,13 +12,6 @@ from app.utils.background_processor import start_background_processing
 main = Blueprint("main", __name__)
 
 
-
-
-
-@main.route("/")
-# ... (rest of the file)
-
-
 @main.route("/")
 def home():
     return render_template("home.html", project_name="LegalEase")
@@ -35,7 +28,7 @@ def health():
     try:
         # Access mongo_client from app config
         mongo_db = current_app.config.get('mongo_db')
-        if mongo_db:
+        if mongo_db is not None:
             mongo_db.client.admin.command("ping")
             db_status = "connected"
         else:
@@ -413,7 +406,7 @@ def chat_with_document(doc_id):
         return jsonify({'success': False, 'message': 'Permission denied.'}), 403
 
     from app.utils.rag import get_relevant_chunks
-    from google import genai
+    from app.utils.gemini_client import get_gemini_client
 
     # 1. Retrieval
     relevant_chunks = get_relevant_chunks(doc_id, question, top_k=3)
@@ -437,16 +430,32 @@ def chat_with_document(doc_id):
     )
 
     try:
-        api_key = current_app.config.get('GEMINI_API_KEY')
-        client = genai.Client(api_key=api_key)
+        client = get_gemini_client()
+        if not client:
+            return jsonify({'success': False, 'message': 'Gemini client initialization failed.'}), 500
         
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=[system_prompt]
-        )
+        import time
+        retries = 3
+        delay = 2.0
+        response = None
+        
+        for attempt in range(retries):
+            try:
+                current_app.logger.debug(f"Chat Prompt: {system_prompt[:500]}...")
+                response = client.models.generate_content(model='gemini-2.5-flash', contents=system_prompt)
+                break
+            except Exception as e:
+                if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                    if attempt < retries - 1:
+                        time.sleep(delay)
+                        delay *= 2
+                        continue
+                raise e
         
         if not response or not hasattr(response, 'text') or not response.text:
             return jsonify({'success': False, 'message': 'AI failed to generate a response.'}), 500
+
+        current_app.logger.debug(f"Chat Response: {response.text[:500]}...")
 
         return jsonify({
             'success': True,
