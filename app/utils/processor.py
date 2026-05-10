@@ -3,6 +3,7 @@ import pdfplumber
 import os
 import time
 from flask import current_app
+from app.utils.crypto import encrypt_text
 from app.utils.ocr import perform_ocr
 from app.utils.rag import chunk_text, get_embedding, batch_list
 from app.utils.llm import generate_full_analysis
@@ -149,7 +150,7 @@ def run_pipeline(doc_id, file_path, ext, user_id=None):
                     batch_docs.append({
                         'doc_id': doc_id,
                         'chunk_index': (batch_index * 40) + i,
-                        'text': text_batch[i],
+                        'text': encrypt_text(text_batch[i]),
                         'embedding': embedding
                     })
                 if batch_docs:
@@ -164,7 +165,7 @@ def run_pipeline(doc_id, file_path, ext, user_id=None):
         # Atomically update document status and metadata
         update_data = {
             'raw_text': raw_text,
-            'cleaned_text': cleaned_text,
+            'cleaned_text': encrypt_text(cleaned_text),
             'doc_type': doc_type,
             'status': 'processed',
             'chunk_count': total_processed_chunks
@@ -179,9 +180,10 @@ def run_pipeline(doc_id, file_path, ext, user_id=None):
             }
             clauses = analysis.get('clauses', [])
 
+        encrypted = encrypt_text(cleaned_text)
         mongo_db.documents.update_one(
             {'doc_id': doc_id},
-            {'$set': update_data}
+            {'$set': {'cleaned_text': encrypted, 'status': 'processed'}}
         )
             
         # 5. Trigger Notifications

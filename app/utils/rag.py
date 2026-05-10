@@ -1,3 +1,4 @@
+from app.utils.crypto import decrypt_text
 from app.utils.gemini_client import get_gemini_client
 import numpy as np
 import re
@@ -139,7 +140,7 @@ def get_relevant_chunks(doc_id, query, top_k=3):
     for chunk in doc_chunks_cursor:
         score = cosine_similarity(query_vector, chunk['embedding'])
         results.append({
-            'text': chunk['text'],
+            'text': decrypt_text(chunk['text']),
             'score': score
         })
         

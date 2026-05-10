@@ -1,3 +1,4 @@
+from app.utils.crypto import decrypt_text
 from app.utils.gemini_client import get_gemini_client
 import json
 import re
@@ -15,6 +16,7 @@ def generate_full_analysis(text):
             'clauses': list
         }
     """
+    plaintext = decrypt_text(text)
     client = get_gemini_client()
     if not client:
         return None
@@ -35,7 +37,7 @@ def generate_full_analysis(text):
         "     ... (identify 3-5 critical clauses)\n"
         "  ]\n"
         "}\n\n"
-        f"DOCUMENT TEXT:\n{text}"
+        f"DOCUMENT TEXT:\n{plaintext}"
     )
 
     for attempt in range(retries):
@@ -82,7 +84,8 @@ def generate_summary(text, mode='short'):
     Uses generate_full_analysis to get data and returns either the short summary 
     or the structured sections depending on the mode.
     """
-    analysis = generate_full_analysis(text)
+    plaintext = decrypt_text(text)
+    analysis = generate_full_analysis(plaintext)
     if not analysis:
         return None
         
@@ -99,6 +102,7 @@ def analyze_clauses(text):
     Returns:
         list: A list of dicts with keys ['name', 'risk_level', 'reasoning'].
     """
+    plaintext = decrypt_text(text)
     client = get_gemini_client()
     if not client:
         return None
@@ -114,7 +118,7 @@ def analyze_clauses(text):
                 "Analyze the following legal document and identify 3 to 5 critical legal clauses that require attention. "
                 "For each clause, provide: 'name', 'risk_level' (High, Medium, or Low), and a concise 'reasoning'. "
                 "Your response MUST be a valid JSON list of objects.\n\n"
-                f"DOCUMENT TEXT:\n{text}"
+                f"DOCUMENT TEXT:\n{plaintext}"
             )
             
             current_app.logger.debug(f"Gemini Clause Analysis Prompt: {prompt[:500]}...")
@@ -163,6 +167,8 @@ def compare_documents(text_a, text_b):
     Returns:
         dict: A dict with keys ['match_score', 'key_differences', 'risk_delta'].
     """
+    plaintext_a = decrypt_text(text_a)
+    plaintext_b = decrypt_text(text_b)
     client = get_gemini_client()
     if not client:
         return None
@@ -181,8 +187,8 @@ def compare_documents(text_a, text_b):
                 "1. 'match_score' (int 0-100), "
                 "2. 'key_differences' (list of strings using '+' for additions/strengthening and '-' for removals/weakening in B), "
                 "3. 'risk_delta' (concise summary of B's risk versus A).\n\n"
-                f"DOCUMENT A:\n{text_a}\n\n"
-                f"DOCUMENT B:\n{text_b}"
+                f"DOCUMENT A:\n{plaintext_a}\n\n"
+                f"DOCUMENT B:\n{plaintext_b}"
             )
             
             current_app.logger.debug(f"Gemini Comparison Prompt: {prompt[:500]}...")
