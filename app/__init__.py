@@ -16,7 +16,7 @@ def create_app(config_object=None):
     app = Flask(
         __name__,
         template_folder=os.path.join(root_dir, "templates"),
-        static_folder=os.path.join(root_dir, "static")
+        static_folder=os.path.join(root_dir, "app/static")
     )
     app.config.from_object(Config)
     if config_object:

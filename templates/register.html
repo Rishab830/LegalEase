@@ -3,35 +3,54 @@
 {% block title %}Register - LegalEase{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
+<div class="row justify-content-center py-5">
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title mb-0">Create Account</h3>
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="card-header bg-primary text-white text-center py-4">
+                <h3 class="fw-bold mb-0">Create Account</h3>
+                <p class="text-white-50 small mb-0">Join LegalEase for AI-powered document analysis</p>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4 p-md-5">
                 <form method="POST">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                    <div class="row">
+                        <div class="col-md-12 mb-4">
+                            <label for="username" class="form-label fw-bold small text-uppercase tracking-wider">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="fas fa-user text-muted"></i></span>
+                                <input type="text" class="form-control bg-light border-0 py-2" id="username" name="username" placeholder="johndoe" required>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
+                    <div class="mb-4">
+                        <label for="email" class="form-label fw-bold small text-uppercase tracking-wider">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="fas fa-envelope text-muted"></i></span>
+                            <input type="email" class="form-control bg-light border-0 py-2" id="email" name="email" placeholder="name@example.com" required>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required minlength="6">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="password" class="form-label fw-bold small text-uppercase tracking-wider">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="fas fa-lock text-muted"></i></span>
+                                <input type="password" class="form-control bg-light border-0 py-2" id="password" name="password" placeholder="••••••••" required minlength="6">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label for="confirm_password" class="form-label fw-bold small text-uppercase tracking-wider">Confirm Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="fas fa-lock-open text-muted"></i></span>
+                                <input type="password" class="form-control bg-light border-0 py-2" id="confirm_password" name="confirm_password" placeholder="••••••••" required minlength="6">
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="confirm_password" class="form-label">Confirm Password</label>
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="6">
+                    <div class="d-grid gap-2 mt-2">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill shadow-sm py-3 fw-bold">Create Account</button>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Register</button>
                 </form>
             </div>
-            <div class="card-footer text-center">
-                <p class="mb-0">Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a></p>
+            <div class="card-footer bg-light text-center py-4 border-0">
+                <p class="mb-0 text-muted">Already have an account? <a href="{{ url_for('auth.login') }}" class="fw-bold text-decoration-none">Sign in here</a></p>
             </div>
         </div>
     </div>

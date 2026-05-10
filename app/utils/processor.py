@@ -1,10 +1,11 @@
 import re
 import pdfplumber
 import os
+import time
 from flask import current_app
 from app.utils.ocr import perform_ocr
-from app.utils.rag import chunk_text, get_embedding
-from app.utils.llm import analyze_clauses
+from app.utils.rag import chunk_text, get_embedding, batch_list
+from app.utils.llm import generate_full_analysis
 from app.utils.notifications import notify_processing_complete, notify_high_risk_detected
 
 def extract_pdf_text(file_path):
@@ -130,42 +131,58 @@ def run_pipeline(doc_id, file_path, ext, user_id=None):
         cleaned_text = clean_text(raw_text)
         doc_type = classify_document(cleaned_text)
 
-        # 3. RAG Vectorization
-        chunks = chunk_text(cleaned_text)
-        chunk_docs = []
-        for i, text_chunk in enumerate(chunks):
-            embedding = get_embedding(text_chunk)
-            if embedding:
-                chunk_docs.append({
-                    'doc_id': doc_id,
-                    'chunk_index': i,
-                    'text': text_chunk,
-                    'embedding': embedding
-                })
+        # 3. RAG Vectorization (Batched to prevent RAM overload)
+        # chunks is now a generator, batch_list handles it efficiently
+        chunks_generator = chunk_text(cleaned_text)
+        mongo_db.chunks.delete_many({'doc_id': doc_id})
         
-        # 4. Clause Analysis (Integrated for Notifications)
-        clauses = analyze_clauses(cleaned_text)
+        total_processed_chunks = 0
+        for batch_index, text_batch in enumerate(batch_list(chunks_generator, batch_size=40)):
+            # Stagger batch embedding calls slightly to prevent rate limiting
+            if batch_index > 0:
+                time.sleep(2)
+                
+            embeddings = get_embedding(text_batch)
+            if embeddings:
+                batch_docs = []
+                for i, embedding in enumerate(embeddings):
+                    batch_docs.append({
+                        'doc_id': doc_id,
+                        'chunk_index': (batch_index * 40) + i,
+                        'text': text_batch[i],
+                        'embedding': embedding
+                    })
+                if batch_docs:
+                    mongo_db.chunks.insert_many(batch_docs)
+                    total_processed_chunks += len(batch_docs)
         
-        # Atomically update document and chunks
+        # 4. Full Analysis (Summary + Sections + Clauses)
+        # Delay slightly before starting next LLM task to respect rate limits
+        time.sleep(3)
+        analysis = generate_full_analysis(cleaned_text)
+        
+        # Atomically update document status and metadata
         update_data = {
             'raw_text': raw_text,
             'cleaned_text': cleaned_text,
             'doc_type': doc_type,
             'status': 'processed',
-            'chunk_count': len(chunk_docs)
+            'chunk_count': total_processed_chunks
         }
         
-        if clauses:
-            update_data['summary'] = {'clauses': clauses}
+        clauses = []
+        if analysis:
+            update_data['summary'] = {
+                'short': analysis.get('short_summary'),
+                'detailed': analysis.get('sections'),
+                'clauses': analysis.get('clauses')
+            }
+            clauses = analysis.get('clauses', [])
 
         mongo_db.documents.update_one(
             {'doc_id': doc_id},
             {'$set': update_data}
         )
-        
-        if chunk_docs:
-            mongo_db.chunks.delete_many({'doc_id': doc_id})
-            mongo_db.chunks.insert_many(chunk_docs)
             
         # 5. Trigger Notifications
         if user_id:

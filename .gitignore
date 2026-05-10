@@ -1,6 +1,8 @@
-__pycache__/
-*.pyc
 .env
-venv/
-uploads/*
-!.gitkeep
+__pycache__/
+.pytest_cache/
+.venv/
+uploads/
+.python-version
+uv.lock 
+
