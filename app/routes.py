@@ -469,13 +469,27 @@ def chat_with_document(doc_id):
 
 # --- Notification Routes ---
 
-@main.route("/notifications")
+@main.route("/api/notifications")
 @login_required
-def notifications():
-    """Display user's notification list."""
-    user_notifications = Notification.get_for_user(current_user.id, limit=50)
-    return render_template("notifications.html", notifications=user_notifications)
-
+def get_notifications_api():
+    """Fetch unread notifications for the current user."""
+    notifications = Notification.get_for_user(current_user.id, limit=20)
+    # Only return unread notifications as requested for the overlay
+    unread = [
+        {
+            'id': n.id,
+            'type': n.type,
+            'message': n.message,
+            'link': n.link,
+            'created_at': n.created_at.strftime('%Y-%m-%d %H:%M')
+        }
+        for n in notifications if not n.is_read
+    ]
+    return jsonify({
+        'success': True,
+        'notifications': unread,
+        'count': len(unread)
+    })
 
 @main.route("/api/notifications/mark-read/<notification_id>", methods=["POST"])
 @login_required
